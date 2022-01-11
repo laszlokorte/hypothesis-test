@@ -1,7 +1,7 @@
 <script>
 	let mean = [-.2,.3]
 	let variance = [0.1,0.2]
-	let sampleCount = 500
+	let sampleCount = 1000
 	let prior = 0.5
 	let boundary = 0
 	let autoOptimize = false
@@ -168,29 +168,28 @@
 	<text x={25} y={flipY(-100)} text-anchor="start">Risk</text>
 	<text x={1000} y={flipY(20)} text-anchor="start">X</text>
 	
-	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + 'V${flipY(0)} Z'} fill={colors[0]} opacity="0.2" />
-	<path d={`M0,${flipY(0)} ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + 'V${flipY(0)} Z'} fill={colors[1]} opacity="0.2" />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]} opacity="0.2" />
+	<path d={`M0,${flipY(0)} ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]} opacity="0.2" />
 		
 	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ')} stroke={colors[0]} fill="none" />
 	<path d={`M0,${flipY(0)} ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ')} stroke={colors[1]} fill="none" />
 		
 		
-	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) =>  x>boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]} />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) =>  x>=boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]} />
 		
-	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x>boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]} />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x>=boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]} />
 	
 		
 	<path d={`M${boundary*500 + 500},${flipY(0)} ` + samples[0].flatMap(([x,p],i) =>  x<boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]}  />
 		
-	<path d={`M${boundary*500 + 500},${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x<boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]}  />
+	<path d={`M${boundary*500 + 500},${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x<boundary ? [] : [('L'+(500+500*x)),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]}  />
 	
-		<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill="none" stroke="black" stroke-width="1"  />
-	
+		<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => [((x>boundary && i-1 && samples[0][i-1][0] < boundary) ? 'V' : 'L'+(500+500*x)),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)}`} fill="none" stroke="black" stroke-width="1"  />
+		
 		
 		
 		<line x1={500+boundary*500} x2={500+boundary*500} y1={flipY(-100)} y2={flipY(300)} stroke="black" stroke-dasharray="20 20" />
 	<text x={500+boundary*500} y={flipY(320)}   text-anchor="middle">Decision Boundary</text>
-		
 		
 		<line x1={500+boundary*500} x2={500+boundary*500 - 50} y1={flipY(250)} y2={flipY(250)} stroke={mean[0] < mean[1] ? colors[0] : colors[1]}/>
 		<line x1={500+boundary*500} x2={500+boundary*500 + 50} y1={flipY(250)} y2={flipY(250)} stroke={mean[1] < mean[0] ? colors[0] : colors[1]} />
