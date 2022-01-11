@@ -39,6 +39,10 @@
 	function optimizBoundary() {
 		
 	}
+
+	function flipY(y) {
+		return 280 - y;
+	}
 </script>
 
 <style>
@@ -141,14 +145,14 @@
 
 <fieldset>
 	<legend>
-			<label><input type="checkbox" bind:checked={autoOptimize} /> Auto Optimize</label></legend>
+			<label><input type="checkbox" bind:checked={autoOptimize} /> Auto Optimize (not implemented yet)</label></legend>
 	<dl>
 		<dt><label for='boundary'>Decision Boundary</label></dt>
 		<dd><input id="boundary" type="range" bind:value={boundary} min="-1" max="1" step="0.01" disabled={autoOptimize} /></dd>
 	</dl>
 </fieldset>
 
-<svg viewBox="-20 -180 1080 700" stroke-width="2" transform="scale(1,-1)" font-size="24">
+<svg viewBox="-20 -180 1080 700" stroke-width="2" font-size="24">
 	<defs>
 		<marker id="arrowhead" markerWidth="10" markerHeight="7" 
     refX="0" refY="3.5" orient="auto">
@@ -156,46 +160,47 @@
     </marker>
 	</defs>
 
-	<line x1="0" y1="0" x2="1000" y2="0" stroke="black" marker-end="url(#arrowhead)" />
-	<line x1="0" y1="0" x2="0" y2="400" stroke="black" marker-end="url(#arrowhead)" />
-	<line x1="0" y1="0" x2="0" y2="-100" stroke="black" marker-end="url(#arrowhead)" />
-	<text x={25} y="400" transform="scale(1,-1)" transform-origin="25 400" text-anchor="start">P(X)</text>
-	<text x={25} y="-100" transform="scale(1,-1)" transform-origin="25 -100" text-anchor="start">Risk</text>
-	<text x={1000} y="20" transform="scale(1,-1)" transform-origin="1000 20" text-anchor="start">X</text>
+	<g>
+	<line x1="0" y1={flipY(0)} x2="1000" y2={flipY(0)} stroke="black" marker-end="url(#arrowhead)" />
+	<line x1="0" y1={flipY(0)} x2="0" y2={flipY(400)} stroke="black" marker-end="url(#arrowhead)" />
+	<line x1="0" y1={flipY(0)} x2="0" y2={flipY(-100)} stroke="black" marker-end="url(#arrowhead)" />
+	<text x={25} y={flipY(400)} text-anchor="start">p(X)</text>
+	<text x={25} y={flipY(-100)} text-anchor="start">Risk</text>
+	<text x={1000} y={flipY(20)} text-anchor="start">X</text>
 	
-	<path d={'M0,0 ' + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),1+p*600]).join(' ') + 'V0 Z'} fill={colors[0]} opacity="0.2" />
-	<path d={'M0,0 ' + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),1+p*600]).join(' ') + 'V0 Z'} fill={colors[1]} opacity="0.2" />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + 'V${flipY(0)} Z'} fill={colors[0]} opacity="0.2" />
+	<path d={`M0,${flipY(0)} ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ') + 'V${flipY(0)} Z'} fill={colors[1]} opacity="0.2" />
 		
-	<path d={'M0,0 ' + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),1+p*600]).join(' ')} stroke={colors[0]} fill="none" />
-	<path d={'M0,0 ' + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),1+p*600]).join(' ')} stroke={colors[1]} fill="none" />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ')} stroke={colors[0]} fill="none" />
+	<path d={`M0,${flipY(0)} ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),flipY(1+p*600)]).join(' ')} stroke={colors[1]} fill="none" />
 		
 		
-	<path d={'M0,0 ' + samples[0].flatMap(([x,p],i) =>  x>boundary ? [] : ['L'+(500+500*x),-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600]).join(' ') + `V0 Z`} fill={colors[1]} />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) =>  x>boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]} />
 		
-	<path d={'M0,0 ' + samples[0].flatMap(([x,p],i) => x>boundary ? [] : ['L'+(500+500*x),-(costs[0][i]*samples[0][i][1])*600]).join(' ') + `V0 Z`} fill={colors[0]} />
-	
-		
-	<path d={`M${boundary*500 + 500},0 ` + samples[0].flatMap(([x,p],i) =>  x<boundary ? [] : ['L'+(500+500*x),-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600]).join(' ') + `V0 Z`} fill={colors[1]}  />
-		
-	<path d={`M${boundary*500 + 500},0 ` + samples[0].flatMap(([x,p],i) => x<boundary ? [] : ['L'+(500+500*x),-(costs[0][i]*samples[0][i][1])*600]).join(' ') + `V0 Z`} fill={colors[0]}  />
-	
-		<path d={`M0,0 ` + samples[0].flatMap(([x,p],i) => ['L'+(500+500*x),-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600]).join(' ') + `V0 Z`} fill="none" stroke="black" stroke-width="1"  />
+	<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x>boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]} />
 	
 		
+	<path d={`M${boundary*500 + 500},${flipY(0)} ` + samples[0].flatMap(([x,p],i) =>  x<boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[1]}  />
 		
-		<line x1={500+boundary*500} x2={500+boundary*500} y1="-100" y2="300" stroke="black" stroke-dasharray="20 20" />
-	<text x={500+boundary*500} y="480" transform="scale(1,-1)" transform-origin="center" text-anchor="middle">Decision Boundary</text>
+	<path d={`M${boundary*500 + 500},${flipY(0)} ` + samples[0].flatMap(([x,p],i) => x<boundary ? [] : ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill={colors[0]}  />
+	
+		<path d={`M0,${flipY(0)} ` + samples[0].flatMap(([x,p],i) => ['L'+(500+500*x),flipY(-(costs[0][i]*samples[0][i][1] + costs[1][i]*samples[1][i][1])*600)]).join(' ') + `V${flipY(0)} Z`} fill="none" stroke="black" stroke-width="1"  />
+	
 		
 		
-		<line x1={500+boundary*500} x2={500+boundary*500 - 50} y1="250" y2="250" stroke={mean[0] < mean[1] ? colors[0] : colors[1]}/>
-		<line x1={500+boundary*500} x2={500+boundary*500 + 50} y1="250" y2="250" stroke={mean[1] < mean[0] ? colors[0] : colors[1]} />
+		<line x1={500+boundary*500} x2={500+boundary*500} y1={flipY(-100)} y2={flipY(300)} stroke="black" stroke-dasharray="20 20" />
+	<text x={500+boundary*500} y={flipY(320)}   text-anchor="middle">Decision Boundary</text>
 		
-		<polygon transform={`translate(${500+boundary*500+50}  250)`} fill={mean[1] < mean[0] ? colors[0] : colors[1]} points="0 -7, 20 0, 0 7" />
-		<polygon transform={`translate(${500+boundary*500-50}  250)`} fill={mean[0] < mean[1] ? colors[0] : colors[1]} points="0 -7, -20 0, 0 7" />
 		
+		<line x1={500+boundary*500} x2={500+boundary*500 - 50} y1={flipY(250)} y2={flipY(250)} stroke={mean[0] < mean[1] ? colors[0] : colors[1]}/>
+		<line x1={500+boundary*500} x2={500+boundary*500 + 50} y1={flipY(250)} y2={flipY(250)} stroke={mean[1] < mean[0] ? colors[0] : colors[1]} />
+		
+		<polygon transform={`translate(${500+boundary*500+50} ${flipY(250)})`} fill={mean[1] < mean[0] ? colors[0] : colors[1]} points="0 -7, 20 0, 0 7" />
+		<polygon transform={`translate(${500+boundary*500-50} ${flipY(250)})`} fill={mean[0] < mean[1] ? colors[0] : colors[1]} points="0 -7, -20 0, 0 7" />
+		</g>
 </svg>
 <h2>
-	
+	Explanation
 </h2>
 		
 	<p>
@@ -210,16 +215,16 @@
 </p>
 <ol>
 	<li>H<sub>1</sub> is true and H<sub>1</sub> is detected</li>
-	<li>H<sub>1</sub> is true and H<sub>2</sub> is detected</li>
-	<li>H<sub>2</sub> is true and H<sub>1</sub> is detected</li>
+	<li>H<sub>1</sub> is true but H<sub>2</sub> is detected</li>
+	<li>H<sub>2</sub> is true but H<sub>1</sub> is detected</li>
 	<li>H<sub>2</sub> is true and H<sub>2</sub> is detected</li>
 </ol>
 	
 <p>
-		Each case has an associated cost. Case 1 and case 4 typacally have cost 0 because they are desired. The other two cases represent false positive and fals negative results. Their cost can be assigned individually.
+		Each case has an associated cost. Case 1 and case 4 typacally have a cost of 0 because they are desired. The other two cases represent false positive and false negative results. Their cost is assigned individually.
 </p>
 <p>
-	The goal is to find a decision boundary that devides the sample space into regions that classify all samples and minimize the expected total cost (risk).
+	The goal is to find a decision boundary that devides the sample space into two regions that classify all samples and minimize the expected total cost (risk).
 </p>
 
 <p style="font-weight: bold; padding: 0 0 2em 0;">
