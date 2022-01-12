@@ -10,7 +10,8 @@
 	let cost = [0,1,1,0]
 	
 	let colors = ['blue', 'red']
-	
+
+
 	$: pdf = (p, x) => {
 		const factor = Math.abs(p - prior)
 		if(variance[p] == 0) {
@@ -21,7 +22,8 @@
 	}
 	
 	$: sampleCost = (p,x) => {
-		return x > boundary ? cost[2*p+ 1] : cost[2*p]
+		const swap = mean[0] > mean[1] ? 1 : 0
+		return x > boundary ? cost[2*p+ 1 - swap] : cost[2*p + swap]
 	}
 	
 	$: X = Array(sampleCount).fill(null).map((_,i) => 2*i/sampleCount - 1)
@@ -36,9 +38,32 @@
 		X.map((x) => sampleCost(1, x))
 	]
 	
-	function optimizBoundary() {
-		
+	function optimizBoundary(prior, samples, cost) {
+		const swap = mean[0] > mean[1] ? 1 : 0
+		let sumLeft = 0
+		let sumRight = (prior)*cost[1-swap] + (1-prior)*cost[3-swap]
+
+		let bestSum = Infinity
+		let bestI = 0
+
+		for (var i = 0; i < samples[0].length; i++) {
+			sumLeft += (samples[0][i][1])*cost[0+swap] + (samples[1][i][1])*cost[2+swap]
+			sumRight -= (samples[0][i][1])*cost[1-swap] + (samples[1][i][1])*cost[3-swap]
+
+			
+			if(sumLeft+sumRight < bestSum) {
+				bestSum = sumLeft + sumRight
+				bestI = i;
+			}
+		}
+
+		return samples[0][bestI][0]
 	}
+
+	$: if(autoOptimize) {
+		boundary = optimizBoundary(prior, samples, cost)
+	}
+
 
 	function flipY(y) {
 		return 280 - y;
@@ -126,16 +151,16 @@
 	</legend>
 		<div class="controls">
 			<dl>
-	<dt><label for='cost_0' style="color: #33a">Cost(t=H<sub>1</sub>|H<sub>1</sub>)</label></dt>
+	<dt><label for='cost_0' style="color: #33a">Cost(t=H<sub>1</sub>|H<sub>1</sub>)</label>0</dt>
 	<dd><input id="cost_0" type="range" bind:value={cost[0]} min="0" max={maxCost} step="0.01" /></dd>
-	<dt><label for='cost_1' style="color: #33a">Cost(t=H<sub>2</sub>|H<sub>1</sub>)</label></dt>
+	<dt><label for='cost_1' style="color: #33a">Cost(t=H<sub>2</sub>|H<sub>1</sub>)</label>1</dt>
 	<dd><input id="cost_1" type="range" bind:value={cost[1]} min="0" max={maxCost} step="0.01" /></dd>
 	</dl>
 		<dl>
 
-	<dt><label for='cost_2'style="color: #a33">Cost(t=H<sub>1</sub>|H<sub>2</sub>)</label></dt>
+	<dt><label for='cost_2'style="color: #a33">Cost(t=H<sub>1</sub>|H<sub>2</sub>)</label>2</dt>
 	<dd><input id="cost_2" type="range" bind:value={cost[2]} min="0" max={maxCost} step="0.01" /></dd>
-	<dt><label for='cost_3' style="color: #a33">Cost(t=H<sub>2</sub>|H<sub>2</sub>)</label></dt>
+	<dt><label for='cost_3' style="color: #a33">Cost(t=H<sub>2</sub>|H<sub>2</sub>)</label>3</dt>
 	<dd><input id="cost_3" type="range" bind:value={cost[3]} min="0" max={maxCost} step="0.01" /></dd>
 </dl>
 		</div>
@@ -145,10 +170,10 @@
 
 <fieldset>
 	<legend>
-			<label><input type="checkbox" bind:checked={autoOptimize} /> Auto Optimize (not implemented yet)</label></legend>
+			<label><input type="checkbox" bind:checked={autoOptimize} /> Auto Optimize</label></legend>
 	<dl>
 		<dt><label for='boundary'>Decision Boundary</label></dt>
-		<dd><input id="boundary" type="range" bind:value={boundary} min="-1" max="1" step="0.01" disabled={autoOptimize} /></dd>
+		<dd><input id="boundary" bind:value={boundary} type="range"  min="-1" max="1" step="0.01" disabled={autoOptimize} /></dd>
 	</dl>
 </fieldset>
 
