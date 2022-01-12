@@ -183,7 +183,7 @@
 
 <fieldset>
 	<legend>
-			<label>View Options</legend>
+			View Options
 	<label><input id="stacked" bind:checked={stacked} type="checkbox" /> Stack distributions</label>
 </fieldset>
 
