@@ -16,12 +16,11 @@
 	$: swapped = mean[0] > mean[1] ? 1 : 0
 
 
-	$: pdf = (p, x) => {
-		const factor = Math.abs(p - prior)
-		if(variance[p] == 0) {
-			return Math.abs(x-mean[p]) < 2/sampleCount ? factor*Math.sqrt(sampleCount) : 0
+	const pdf = (mean, variance, x) => {
+		if(variance == 0) {
+			return Math.abs(x-mean) < 2/sampleCount ? Math.sqrt(sampleCount) : 0
 		} else {
-			return factor * 1/(variance[p]*Math.pow(2*Math.PI, 2)) * Math.exp(-0.5*Math.pow(x-mean[p], 2) / Math.pow(variance[p], 2))
+			return 1/(variance*Math.pow(2*Math.PI, 2)) * Math.exp(-0.5*Math.pow(x-mean, 2) / Math.pow(variance, 2))
 		}
 	}
 	
@@ -30,11 +29,11 @@
 		return x > boundary ? cost[2*p+ 1 - swap] : cost[2*p + swap]
 	}
 	
-	$: X = Array(sampleCount).fill(null).map((_,i) => 2*i/sampleCount - 1)
+	const X = Array(sampleCount).fill(null).map((_,i) => 2*i/sampleCount - 1)
 	
 	$: samples = [
-		X.map((x) => [x, pdf(0, x)]),
-		X.map((x) => [x, pdf(1, x)])
+		X.map((x) => [x, prior * pdf(mean[0], variance[0], x)]),
+		X.map((x) => [x, (1-prior) * pdf(mean[1], variance[1], x)])
 	]
 	
 	$: costs = [
@@ -42,17 +41,20 @@
 		X.map((x) => sampleCost(1, x))
 	]
 	
-	function optimizBoundary(prior, samples, cost) {
-		const swap = mean[0] > mean[1] ? 1 : 0
+	function optimizBoundary(prior, means, variances, cost) {
+		const swap = means[0] > means[1] ? 1 : 0
 		let sumLeft = 0
-		let sumRight = (prior)*cost[1-swap] + (1-prior)*cost[3-swap]
+		let sumRight = ((prior)*cost[1-swap] + (1-prior)*cost[3-swap])*Math.sqrt(sampleCount)
 
 		let bestSum = Infinity
 		let bestI = 0
 
-		for (var i = 0; i < samples[0].length; i++) {
-			sumLeft += (samples[0][i][1])*cost[0+swap] + (samples[1][i][1])*cost[2+swap]
-			sumRight -= (samples[0][i][1])*cost[1-swap] + (samples[1][i][1])*cost[3-swap]
+		for (var i = 0; i < sampleCount; i++) {
+			sumLeft += (prior * pdf(mean[swap], variance[swap], X[i]))*cost[0+swap] 
+			+ ((1-prior) * pdf(mean[1-swap], variance[1-swap], X[i]))*cost[2+swap]
+
+			sumRight -= (prior * pdf(mean[swap], variance[swap], X[i]))*cost[1-swap] 
+			+ ((1-prior) * pdf(mean[1-swap], variance[1-swap], X[i]))*cost[3-swap]
 
 			
 			if(sumLeft+sumRight < bestSum) {
@@ -61,12 +63,19 @@
 			}
 		}
 
-		return samples[0][bestI][0]
+		return [X[bestI], bestSum]
 	}
 
 	$: if(autoOptimize) {
-		boundary = optimizBoundary(prior, samples, cost)
+		const o = optimizBoundary(prior, mean, variance, cost)
+		boundary = o[0]
 	}
+
+	const candidateCount = 50
+
+	$: candidatePriors = Array(candidateCount).fill(null).map((_,i) => i/candidateCount).map(p => [p,(optimizBoundary(p, mean, variance, cost)[1])])
+
+	$: bestPrior = candidatePriors.reduce(([p, highest], [pri, risk]) => (risk > highest ? [pri,risk] : [p, highest]))
 
 
 	function flipY(y) {
@@ -187,6 +196,7 @@
 	<label><input id="stacked" bind:checked={stacked} type="checkbox" /> Stack distributions</label>
 </fieldset>
 
+
 <svg viewBox="-20 -180 1080 700" stroke-width="2" font-size="24">
 	<defs>
 		<marker id="arrowhead" markerWidth="10" markerHeight="7" 
@@ -251,7 +261,7 @@
 </h2>
 		
 	<p>
-	The goal is do decide if a given sample <code>x</code> is more likely to originate from one distribution (hypothesis 1) or from another one (hypthesis 2).
+	The goal is to decide if a given sample <code>x</code> is more likely to originate from one distribution (hypothesis 1) or from another one (hypthesis 2).
 </p>
 <p>
 	It is assumed that both possible distributions are known and that we know the prior probability of any sample to be from the one or the other distribution. For example if the prior is 0.5 in general both distributions are equally likely. If the prior is 0.1 samples from one distribution are assumed to be much more likely than from the other.
@@ -277,3 +287,47 @@
 <p style="font-weight: bold; padding: 0 0 2em 0;">
 	Above you can model two distributions, assign cost values and then try to move the decision boundary so that the area under the risk function is minimized.
 </p>
+
+<h3>Unknown Prior</h3>
+
+<p>
+	If the prior is not known, one can assume the worst case and pick the prior that leads to the highest lowest risk:
+</p>
+
+<svg viewBox="-20 -180 1080 500" stroke-width="2" font-size="24">
+	<line x1="0" y1={flipY(0)} x2="1000" y2={flipY(0)} stroke="black" marker-end="url(#arrowhead)" />
+		<line x1="0" y1={flipY(0)} x2="0" y2={flipY(400)} stroke="black" marker-end="url(#arrowhead)" />
+		<text x={25} y={flipY(400)} text-anchor="start">Lowest Risk for Prior</text>
+		<text x={1000} y={flipY(20)} text-anchor="start">Prior</text>
+
+		<path d={`M0,${flipY(0)} ` + candidatePriors.map(([pri,risk]) => `L${pri*1000},${flipY(50*(risk))}`).join(' ')} stroke-width="2" stroke="black" fill="none" />
+
+		<circle cx={bestPrior[0]*1000} cy={flipY(50*bestPrior[1])} r="5" />
+		<text x={bestPrior[0]*1000} y={flipY(50*bestPrior[1]+20)} text-anchor="middle">Worst Prior</text>
+
+</svg>
+
+<p>
+	Which prior is worst does depend on both the hypthesis and the costs.
+</p>
+
+<fieldset>
+	<legend>
+		Costs
+	</legend>
+		<div class="controls">
+			<dl>
+	<dt><label for='cost_0_bottom' style={`color: ${costColors[0]}`}>Cost<sub>1|1</sub></label></dt>
+	<dd><input id="cost_0_bottom" type="range" bind:value={cost[0]} min="0" max={maxCost} step="0.01" /></dd>
+	<dt><label for='cost_1_bottom' style={`color: ${costColors[1]}`}>Cost<sub>2|1</sub></label></dt>
+	<dd><input id="cost_1_bottom" type="range" bind:value={cost[1]} min="0" max={maxCost} step="0.01" /></dd>
+	</dl>
+		<dl>
+
+	<dt><label for='cost_2_bottom'style={`color:${costColors[2]}`}>Cost<sub>1|2</sub></label></dt>
+	<dd><input id="cost_2_bottom" type="range" bind:value={cost[2]} min="0" max={maxCost} step="0.01" /></dd>
+	<dt><label for='cost_3_bottom' style={`color:${costColors[3]}`}>Cost<sub>2|2</sub></label></dt>
+	<dd><input id="cost_3_bottom" type="range" bind:value={cost[3]} min="0" max={maxCost} step="0.01" /></dd>
+</dl>
+		</div>
+	</fieldset>
