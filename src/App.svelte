@@ -4,6 +4,7 @@
 	let sampleCount = 1000
 	let prior = 0.5
 	let boundary = 0
+	let boundaryNoCost = 0
 	let autoOptimize = false
 	let stacked = false
 	
@@ -16,12 +17,27 @@
 	$: swapped = mean[0] > mean[1] ? 1 : 0
 
 
-	const pdf = (mean, variance, x) => {
+	function pdf(mean, variance, x) {
 		if(variance == 0) {
 			return Math.abs(x-mean) < 2/sampleCount ? Math.sqrt(sampleCount) : 0
 		} else {
 			return 1/(variance*Math.pow(2*Math.PI, 2)) * Math.exp(-0.5*Math.pow(x-mean, 2) / Math.pow(variance, 2))
 		}
+	}
+
+	function cdf(mean, variance, x) {
+		if(variance == 0) {
+			return x-mean > -1/sampleCount ? 1 : 0
+		} else {
+			return 0.5 * (1 + erf((x-mean)/Math.sqrt(2)/variance))
+		}
+	}
+
+	function erf(x) {
+		const enxx = Math.exp(-x*x)
+		const sqpi = Math.sqrt(Math.PI)
+
+		return 2/sqpi * Math.sign(x) * Math.sqrt(1-enxx) * (sqpi/2 + 31/200 * enxx - 341/8000 * Math.sqrt(1-enxx*enxx))
 	}
 	
 	$: sampleCost = (p,x) => {
@@ -34,6 +50,11 @@
 	$: samples = [
 		X.map((x) => [x, prior * pdf(mean[0], variance[0], x)]),
 		X.map((x) => [x, (1-prior) * pdf(mean[1], variance[1], x)])
+	]
+
+	$: integrations = [
+		X.map((x) => [x, cdf(mean[0], variance[0], x)]),
+		X.map((x) => [x, cdf(mean[1], variance[1], x)])
 	]
 	
 	$: costs = [
@@ -212,7 +233,7 @@
 	<text x={25} y={flipY(400)} text-anchor="start">p(X)</text>
 	<text x={25} y={flipY(-100)} text-anchor="start">Risk</text>
 	<text x={1000} y={flipY(20)} text-anchor="start">X</text>
-	
+
 
 	{#if stacked}
 
@@ -331,3 +352,89 @@
 </dl>
 		</div>
 	</fieldset>
+
+<h3>Unknown Costs</h3>
+
+<p>If both the costs and the prior is unknown its still possible to find an optimal decision boundary by looking at the resulting ratio between <strong>true positives</strong> and <strong>false positives</strong> for the two given distributions. The resulting curve is called the <a href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic">receiver operating characteristic curve</a>.</p>
+
+<div>
+
+	<svg viewBox="-350 -150 1600 1250" stroke-width="2" font-size="30">
+			
+
+	<line x1="0" y1={(0)} x2="1050" y2={(0)} stroke="black" marker-end="url(#arrowhead)" />
+	<line x1="0" y1={(0)} x2="0" y2={(1050)} stroke="black" marker-end="url(#arrowhead)" />
+
+	<text font-weight="bold" fill={colors[1]}  x={450 + 500 * boundaryNoCost} y={(-65)} text-anchor="end"><tspan dx="0" dy="0">false</tspan> <tspan dx="-110" dy="40">positives</tspan></text>
+
+	<text fill={colors[1]} x={550 + 500 * boundaryNoCost} y={(-65)} text-anchor="start"><tspan dy="0">true</tspan> <tspan  dx="-110" dy="40">negatives</tspan></text>
+
+
+	<text font-weight="bold" fill={colors[0]}  y={450 + 500 * boundaryNoCost} x={(-65)} text-anchor="end"><tspan dx="-0" dy="0">true</tspan> <tspan dx="-110" dy="40">positives</tspan></text>
+
+	<text fill={colors[0]} y={550 + 500 * boundaryNoCost} x={(-65)} text-anchor="end"><tspan dy="0">false</tspan> <tspan  dx="-110" dy="40">negatives</tspan></text>
+
+		<path d={integrations[0].flatMap(([x,p], i) => [
+		(i>0?'L':'M')+
+		(1000*integrations[0][i][1]),
+		(1000*integrations[1][i][1])
+		]).join(' ')
+	} fill="none" stroke="black" />
+
+	<circle cx={1000 * cdf(mean[0], variance[0], boundaryNoCost)} cy={1000 * cdf(mean[1], variance[1], boundaryNoCost)} r="15" />
+
+	<circle cx={0} cy={500 + 500*boundaryNoCost} r="10" />
+	<circle cx={500 + 500*boundaryNoCost} cy={0} r="10" />
+
+<!-- 	<path d={`M0,${flipY(0)} ` + integrations[0].flatMap(([x,p]) => ['L'+(500+500*x),flipY((p)*600)]).join(' ')} fill="none" stroke={colors[0]} opacity="0.21" />
+
+	<path d={`M0,${flipY(0)} ` + integrations[1].flatMap(([x,p],i) => ['L'+(500+500*x),flipY((1-p)*600)]).join(' ')} fill="none" stroke={colors[1]} opacity="0.1" /> -->
+
+	<line x1="0" y1="0" x2="1000" y2="1000" stroke-dasharray="20 20" stroke="gray" />
+
+	<path d={`M0,-5 ` + samples[1].flatMap(([x,p]) => ['L'+(500+500*x),-(5+p*600)]).join(' ') + `V${(-5)} Z`} fill={colors[1]} opacity="0.2" />
+
+	<path d={`M-5,0 ` + samples[0].flatMap(([x,p],i) => ['L'+-(5+p*600),(500+500*x)]).join(' ') + `H${(-5)} Z`} fill={colors[0]} opacity="0.2" />
+		
+	<path d={`M0,-5 ` + samples[1].flatMap(([x,p]) => x>boundaryNoCost ? [] : ['L'+(500+500*x),-(5+p*600)]).join(' ') + `V${(-5)} Z`} fill={colors[1]} opacity="0.5" />
+
+	<path d={`M-5,0 ` + samples[0].flatMap(([x,p]) => x>boundaryNoCost ? [] : ['L'+-(5+p*600),(500+500*x)]).join(' ') + `H${(-5)} Z`} fill={colors[0]} opacity="0.5" />
+	
+	</svg>
+
+<div>
+	
+<fieldset>
+	<legend>
+		Hypothesis 1
+	</legend>
+<dl style={`color: ${colors[0]}`}>
+	<dt><label for='mean_0'>H<sub>1</sub> Mean</label></dt>
+	<dd><input id="mean_0" type="range" bind:value={mean[0]} min="-1" max="1" step="0.01" /></dd>
+	<dt><label for='variance_0'>H<sub>1</sub> Variance</label></dt>
+	<dd><input id="variance_0" type="range" bind:value={variance[0]} min="0" max="1" step="0.001" /></dd>
+</dl>	
+</fieldset>
+
+<fieldset>
+	<legend>
+		Hypothesis 2
+	</legend>
+	<dl style={`color: ${colors[1]}`}>
+	<dt><label for='mean_1'>H<sub>2</sub> Mean</label></dt>
+	<dd><input id="mean_1" type="range" bind:value={mean[1]} min="-1" max="1" step="0.01" /></dd>
+	<dt><label for='variance_1'>H<sub>2</sub> Variance</label></dt>
+	<dd><input id="variance_1" type="range" bind:value={variance[1]} min="0" max="1" step="0.001" /></dd>
+</dl>
+</fieldset>
+<fieldset>
+	<legend>Without costs</legend>
+	<dl>
+		<dt><label for='boundary_bottom'>Decision Boundary</label></dt>
+		<dd><input id="boundary_bottom" bind:value={boundaryNoCost} type="range"  min="-1" max="1" step="0.01" /></dd>
+	</dl>
+</fieldset>
+
+</div>
+	
+</div>
