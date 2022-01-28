@@ -137,6 +137,16 @@
 	label {
 		white-space: nowrap;
 	}
+
+	fieldset {
+		margin: 0.5em 0;
+	}
+
+	legend {
+		background-color: #333;
+		color: #fff;
+		padding: 0.1em 0.3em;
+	}
 </style>
 
 <h1>
@@ -214,6 +224,7 @@
 <fieldset>
 	<legend>
 			View Options
+		</legend>
 	<label><input id="stacked" bind:checked={stacked} type="checkbox" /> Stack distributions</label>
 </fieldset>
 
