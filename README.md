@@ -1,6 +1,6 @@
 ![Screenshot of the app](preview.png)
 
-[Live Demo](https://static.laszlokorte.de/hypothesis/)
+[Live Demo](https://static.laszlokorte.de/hypothesis/) | [Short demo video](https://www.youtube.com/watch?v=YDMagPuzIp4)
 
 # Binary Hypothesis Test
 
